@@ -1,4 +1,4 @@
-# 📦 SAP MM | Goods Receipt Management Report
+# 📦 [MM] Goods Receipt Management Report
 
 ![SAP](https://img.shields.io/badge/SAP-ERP-blue?style=flat-square&logo=sap)
 ![Module](https://img.shields.io/badge/Module-MM-green?style=flat-square)
