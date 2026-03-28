@@ -1,5 +1,4 @@
 # 📦 SAP MM | Goods Receipt Management Report
-> **FD_MM_02** — Functional Design Document for MM Purchasing & Goods Receipt
 
 ![SAP](https://img.shields.io/badge/SAP-ERP-blue?style=flat-square&logo=sap)
 ![Module](https://img.shields.io/badge/Module-MM-green?style=flat-square)
