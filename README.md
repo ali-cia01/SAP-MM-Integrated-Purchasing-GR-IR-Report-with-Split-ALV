@@ -1,98 +1,200 @@
-# 📦 [MM] Integrated Purchasing & GR/IR Report with Split ALV
+# 📦 SAP MM | Goods Receipt Management Report
+> **FD_MM_02** — Functional Design Document for MM Purchasing & Goods Receipt
 
-> **SAP MM Module | ABAP Report**
-> [cite_start]A comprehensive tracking report for the purchasing process (PO → GR → IR) featuring real-time BAPI integration and multi-perspective Split ALV layouts[cite: 1, 6, 7].
+![SAP](https://img.shields.io/badge/SAP-ERP-blue?style=flat-square&logo=sap)
+![Module](https://img.shields.io/badge/Module-MM-green?style=flat-square)
+![Type](https://img.shields.io/badge/Type-ALV%20Report-orange?style=flat-square)
+![BAPI](https://img.shields.io/badge/BAPI-GOODSMVT__CREATE%20%7C%20CANCEL-red?style=flat-square)
 
 ---
 
 ## 📌 Overview
 
-[cite_start]This ABAP program provides a centralized dashboard to monitor the entire lifecycle of a Purchase Order, from initial requisition to final invoice verification[cite: 1, 6]. [cite_start]It utilizes a **Split ALV** interface to present both granular line-item details and aggregated summaries (by Vendor and Material) on a single screen[cite: 6, 349, 351, 360]. 
+A custom SAP MM report that integrates **Purchase Order (PO) data**, **Goods Receipt (GR) processing**, and **Invoice Verification (IV)** status into a single unified screen.
 
-[cite_start]A key feature is the direct integration with SAP BAPIs, allowing users to perform Goods Receipt (GR) postings or cancellations directly from the ALV grid[cite: 7, 176, 194, 195].
-
----
-
-## ✨ Key Features
-
-* [cite_start]**Integrated Monitoring:** Tracks the status of PO, GR, and IR in one view[cite: 1, 6].
-* **Visual Status Indicators:** Uses traffic light icons to represent processing stages:
-    * [cite_start]🟢 **Green:** Both GR and IR are completed[cite: 113].
-    * [cite_start]🟡 **Yellow:** Either GR or IR is completed[cite: 113].
-    * [cite_start]🔴 **Red:** Neither GR nor IR is completed[cite: 113].
-* **Real-time BAPI Processing:**
-    * [cite_start]**GR Creation:** Executes `BAPI_GOODSMVT_CREATE` for selected lines[cite: 7, 194, 269].
-    * [cite_start]**GR Cancellation:** Executes `BAPI_GOODSMVT_CANCEL` for selected lines[cite: 7, 195, 270].
-* [cite_start]**Split ALV Implementation:** Displays two independent ALV instances simultaneously; one for main data and another split into Vendor/Material summaries[cite: 6, 24, 349, 351, 360].
-* [cite_start]**Detailed Document Flow:** A dedicated "Doc Flow" button triggers a popup with **Tabstrip** controls to view specific GR and IR history for a selected item[cite: 8, 20, 296].
-* [cite_start]**Navigation (Hotspots):** Support for double-click navigation to standard transactions like `ME23N` (PO), `ME53N` (PR), and Vendor/Material master data[cite: 116, 121, 126, 131].
+- Displays PO data across multiple ALV views simultaneously
+- Enables GR creation and cancellation via BAPI
+- Provides Document Flow inquiry via Tabstrip popup
 
 ---
 
-## 🖥️ Selection Screen
-
-| Field | SAP Reference | Required | Note |
-| :--- | :--- | :---: | :--- |
-| Company Code | EKPO-BUKRS | ✅ | [cite_start]No intervals allowed [cite: 50, 51, 52] |
-| Plant | EKPO-WERKS | [cite_start]✅ | [cite: 53] |
-| Material | EKPO-MATNR | [cite_start]| [cite: 54] |
-| Vendor | EKKO-LIFNR | [cite_start]| [cite: 55] |
-| Purchase Order | EKPO-EBELN | [cite_start]| [cite: 56] |
-| Purchasing Organization | EKKO-EKORG | [cite_start]| [cite: 57] |
-| Purchasing Group | EKKO-EKGRP | [cite_start]| [cite: 58] |
-| Item Category | EKPO-PSTYP | [cite_start]| [cite: 59] |
-| Account Assignment Cat. | EKPO-KNTTP | [cite_start]| [cite: 60] |
-
----
-
-## 📊 Output Layouts
-
-### 1. ALV1: Main PO Detail List
-[cite_start]This primary grid displays detailed PO items and their corresponding GR/IR status[cite: 23, 62].
-* [cite_start]**Open PO Quantity:** Calculated as `PO Quantity - GR Quantity`[cite: 141, 143].
-* [cite_start]**GR Processing Qty:** Input field for specifying the quantity to be posted via BAPI (defaulted to Open PO Qty)[cite: 144, 146].
-* [cite_start]**History Tracking:** Displays the most recent GR/IV document numbers and total accumulated amounts[cite: 83, 85, 86, 87, 89, 96, 100].
-
-### 2. ALV2: Split Summary View
-[cite_start]Implements `CL_GUI_SPLITTER_CONTAINER` to show two summary tables at the bottom of the screen[cite: 24, 349, 371].
-* [cite_start]**[ALV BY Vendor]:** Summarizes PO Qty, Open Qty, PO Amount, GR Qty, and GR/IR Amounts per Vendor[cite: 351, 352, 354, 355, 356, 357, 358, 359].
-* [cite_start]**[ALV BY Material]:** Summarizes the same metrics grouped by Material[cite: 360, 361, 363, 364, 365, 366, 367, 368].
+## 🗂️ Screen Layout
+```
+┌─────────────────────────────────────────────────────┐
+│                   Selection Screen                  │
+└─────────────────────────┬───────────────────────────┘
+                          │
+          ┌───────────────┴───────────────┐
+          ▼                               ▼
+   ┌─────────────┐                ┌──────────────────┐
+   │    TAB 1    │                │      TAB 2       │
+   │  ALV_PO     │                │  ALV_VENDOR      │
+   │  (PO-based) │                │  ALV_MATERIAL    │
+   └──────┬──────┘                │  (Split ALV)     │
+          │                       └──────────────────┘
+          ▼
+   ┌──────────────────────────┐
+   │   Popup Subscreen        │
+   │   (Tabstrip: TAB1, TAB2) │
+   └──────────────────────────┘
+```
 
 ---
 
-## ⚙️ Technical Details
+## 🔍 1. Selection Screen
 
-### BAPI Integration Parameters
-* [cite_start]**GR Posting:** Uses `GM_CODE` '01' and `MOVE_TYPE` '101'[cite: 219, 226, 269].
-* [cite_start]**Negative Sign Handling:** For return deliveries or cancellations (`SHKZG` = 'H'), the quantities and amounts are displayed with a negative sign[cite: 165].
+**Block: Purchasing Processing Info.**
 
-### Popup Screen (Document Flow)
-* [cite_start]**TAB1 (GR Info):** Shows Purchase No, Item, GR Document, Year, Qty, and Amount[cite: 297, 299, 301, 303, 305, 307, 309].
-* [cite_start]**TAB2 (IV Info):** Shows Purchase No, Item, IV Document, Year, and Amount[cite: 312, 313, 315, 317, 319, 321].
-
----
-
-## 🗂️ SAP Tables Referenced
-
-| Table | Description | Key Fields Used |
-| :--- | :--- | :--- |
-| **EKKO / EKPO** | PO Header / Item | [cite_start]EBELN, EBELP, BUKRS, WERKS, MATNR, LIFNR [cite: 50, 53, 54, 55, 56, 120] |
-| **EKBE** | PO History | [cite_start]BELNR, GJAHR, VGABE (1=GR, 2=IR), SHKZG [cite: 157, 160, 165, 168, 175] |
-| **EBAN** | Purchase Requisition | [cite_start]BANFN, BNFPO [cite: 115, 118] |
-| **LFA1** | Vendor Master | [cite_start]LIFNR, NAME1 [cite: 125, 128] |
-| **MAKT** | Material Description | [cite_start]MATNR, MAKTX [cite: 130, 133] |
-| **BSEG** | Accounting Document | [cite_start]BELNR, WRBTR [cite: 166, 167] |
+| Field | Reference | Required | Notes |
+|---|---|:---:|---|
+| Company | `EKPO-BUKRS` | ✅ | No Interval |
+| Plant | `EKPO-WERKS` | | Range |
+| Material | `EKPO-MATNR` | | Range |
+| Vendor | `EKKO-LIFNR` | | Range |
+| Purchase Order | `EKPO-EBELN` | | Range |
+| Purchase Org. | `EKKO-EKORG` | | Range |
+| Purchase Group | `EKKO-EKGRP` | | Range |
+| Item Category | `EKPO-PSTYP` | | Range |
+| AAC | `EKPO-KNTTP` | | Range |
+| Include Deletion | — | | Checkbox |
 
 ---
 
-## 🛠️ Development Environment
+## 📊 2. ALV1 — PO-Based List (`ALV_PO`)
 
-* [cite_start]**Module:** SAP MM (Materials Management) 
-* [cite_start]**Language:** ABAP 
-* [cite_start]**UI Components:** * Selection Screen [cite: 3, 26]
-    * [cite_start]ALV Grid (`CL_GUI_ALV_GRID`) [cite: 6, 23, 24]
-    * [cite_start]Splitter Container (`CL_GUI_SPLITTER_CONTAINER`) [cite: 6, 349]
-    * [cite_start]Tabstrip Control (Screen 0100/0200) [cite: 12, 296]
+### Output Fields
+
+| Field | Reference | Description |
+|---|---|---|
+| Checkbox | — | Row selection for button actions |
+| Status | N/A | 🟢 GR & IV complete / 🟡 Either complete / 🔴 Neither |
+| PO Num. | `EKPO-EBELN` | Hotspot → PO document |
+| Item | `EKPO-EBELP` | |
+| Pur. Req. | `EBAN-BANFN` | Double-click → PR document |
+| Vendor | `EKKO-LIFNR` | Double-click → Vendor master |
+| Material | `EKPO-MATNR` | Hotspot → Material document |
+| Material Description | `MAKT-MAKTX` | Language: `SY-LANGU` |
+| Plant | `EKPO-WERKS` | |
+| Storage Location | `EKPO-LGORT` | |
+| PO Qty | `EKPO-MENGE` | |
+| Open PO Qty | Calculated | PO Qty − GR Qty |
+| Unit | `EKPO-MEINS` | |
+| Net Price | `EKPO-NETPR` | |
+| Currency | `EKKO-WAERS` | |
+| GR Doc | `EKBE-BELNR` | Multi-icon → Double-click for Doc. Flow |
+| GR Year | `EKBE-GJAHR` | |
+| GR Qty | `EKBE-MENGE` | Negative if `EKBE-SHKZG = 'H'` |
+| GR Amount | `EKBE-DMBTR` | |
+| IV Doc. | `EKBE-BELNR` | `VGABE = 2` in EKBE |
+| IV Year | `EKBE-GJAHR` | |
+| IV Amount | `EKBE-DMBTR` | |
+
+> **Note:** In `EKBE`, `VGABE = 1` → Goods Receipt / `VGABE = 2` → Invoice Verification
 
 ---
-[cite_start]*This report was developed to optimize the Purchasing Officer's workflow by automating GR entries and providing instant data reconciliation[cite: 5, 7, 8].*
+
+### ⚙️ Application Buttons
+
+#### 📥 GR Processing — `BAPI_GOODSMVT_CREATE`
+
+> Only **one checkbox row** may be selected. Multiple selections trigger an error message.
+
+| Structure/Table | Field | Description | Value |
+|---|---|---|---|
+| `GOODSMVT_HEADER` | `PSTNG_DATE` | Posting Date | From popup |
+| | `DOC_DATE` | Document Date | `SY-DATUM` |
+| | `REF_DOC_NO` | Reference No. | ALV input |
+| `GOODSMVT_CODE` | `GM_CODE` | GM Code | `01` |
+| `GOODSMVT_ITEM` | `MATERIAL` | Material | Selected row |
+| | `MOVE_TYPE` | Movement Type | `101` |
+| | `PO_NUMBER` | PO Number | Selected row |
+| | `PO_ITEM` | PO Item | Selected row |
+| | `MVT_IND` | Movement Indicator | `B` |
+
+**On Success:** Success message displayed → GR document number updated in ALV → Row style reset
+
+#### ❌ GR Cancellation — `BAPI_GOODSMVT_CANCEL`
+
+| Structure/Table | Field | Description | Value |
+|---|---|---|---|
+| `GOODSMVT_ITEM` | `MATERIALDOCUMENT` | Material Document | From selected row |
+| | `MATDOCUMENTYEAR` | Document Year | From selected row |
+
+---
+
+### 📄 ALV Button — Document Flow (`Doc Flow`)
+
+> Only **one checkbox row** may be selected. Multiple selections trigger an error message.
+
+- Opens a **Tabstrip popup** with GR and IV details for the selected PO line
+- If GR Doc shows a **multi-icon**, clicking that row opens an additional **ALV popup** listing all Doc Flows
+
+| TAB1 — GR Info | TAB2 — IV Info |
+|---|---|
+| Purchasing No. | Purchasing No. |
+| Item | Item |
+| GR Doc | IV Doc |
+| Year | Year |
+| GR Qty | — |
+| GR Amount | IV Amount |
+
+---
+
+## 📊 3. ALV2 — Vendor & Material Summary (Split ALV)
+
+Two ALV instances displayed **simultaneously** within a single screen area using **Split ALV**.
+
+### ALV BY Vendor
+
+| Field | Description |
+|---|---|
+| Vendor | Vendor code |
+| Name | Vendor name |
+| PO Quantity | Total PO quantity |
+| Open PO Qty | Remaining open quantity |
+| PO Amount | Total PO amount |
+| GR Qty | Total GR quantity |
+| GR Amount | Total GR amount |
+| IV Amount | Total IV amount |
+
+### ALV BY Material
+
+| Field | Description |
+|---|---|
+| Material | Material code |
+| Material Description | Material description |
+| PO Quantity | Total PO quantity |
+| Open PO Qty | Remaining open quantity |
+| PO Amount | Total PO amount |
+| GR Qty | Total GR quantity |
+| GR Amount | Total GR amount |
+| IV Amount | Total IV amount |
+
+> Field references are identical to ALV1.
+
+---
+
+## ✅ Key Features
+
+| Feature | Description |
+|---|---|
+| Dual ALV Display | ALV1 (PO view) + ALV2 (Vendor/Material view) on one screen |
+| Split ALV | Vendor & Material summaries side by side |
+| GR Processing | Create GR via `BAPI_GOODSMVT_CREATE` (Movement Type 101) |
+| GR Cancellation | Cancel GR via `BAPI_GOODSMVT_CANCEL` |
+| Doc Flow Popup | Tabstrip popup showing GR & IV document details |
+| Navigation | Hotspot/Double-click to PO, PR, Vendor, Material master |
+| Status Indicator | Traffic light for GR/IV completion status |
+
+---
+
+## 📁 Related SAP Tables
+
+| Table | Description |
+|---|---|
+| `EKKO` | Purchasing document header |
+| `EKPO` | Purchasing document item |
+| `EBAN` | Purchase requisition |
+| `EKBE` | Purchasing document history (GR/IV) |
+| `MAKT` | Material descriptions |
+| `LFA1` | Vendor master — general data |
